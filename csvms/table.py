@@ -82,14 +82,14 @@ class Table():
         'exists' :lambda   x:x is not None}
     # Supported functions
     functions = {
-        'add': lambda x,y: None if x is None or y is None else x+y,
-        'sub': lambda x,y: None if x is None or y is None else x-y,
-        'div': lambda x,y: None if x is None or y is None else x/y,
-        'mul': lambda x,y: None if x is None or y is None else x*y,
+        'add'   : lambda x,y: None if x is None or y is None else x+y,
+        'sub'   : lambda x,y: None if x is None or y is None else x-y,
+        'div'   : lambda x,y: None if x is None or y is None else x/y,
+        'mul'   : lambda x,y: None if x is None or y is None else x*y,
         'ifnull': lambda x,y: y if x is None else x,
         'coalesce': lambda x,y: y if x is None else x,
-        #TODO: Concatenate two string
-        #TODO: Raises expr1 to the power of expr2.
+        'concat': lambda x,y: None if x is None or y is None else str(x)+str(y),
+        'pow'   : lambda x,y: None if x is None or y is None else x**y,
     }
     # Supported operations in reverse
     _strtypes_ = {value:key for key, value in dtypes.items()}
@@ -701,10 +701,169 @@ class Table():
             data=rows)
 
     #TODO: Implement FULL join operator `ᗌᗏ`
+    def ᗌᗏ(self, other:"Table", where:Dict[str,list]) -> "Table":
+        """FULL join operator (ᗌᗏ)"""
+
+        full_cols = dict()
+        full_cols.update({f"self.{k}":v for k, v in self.columns.items()})
+        full_cols.update({f"other.{k}":v for k, v in other.columns.items()})
+        full_rows = list()
+
+        where = list(where.items())
+
+        #where = {(where[0][0]): [(where[0][1][0]).split('.')[1], (where[0][1][1]).split('.')[1]]}
+
+        for row in self:
+            for row_2 in other.σ({(where[0][0]): [(where[0][1][0]).split('.')[1], row[1]]},null=True):
+                full_rows.append(row + row_2)
+        for row_2 in other:
+            for row in self.σ({(where[0][0]): [(where[0][1][0]).split('.')[1], row_2[0]]},null=True):
+                full_rows.append(row + row_2)
+        
+        table_name = f"({self.name}ᗌᗏ{other.name})"
+
+        tbl = Table(
+                    name=table_name,
+                    columns=full_cols,
+                    data=list(dict.fromkeys(full_rows))
+                   )
+
+        return tbl
+
     #TODO: Implement LEFT SEMI join operator `ᐅᐸ`
+    def ᐅᐸ(self, other:"Table", where:Dict[str,list]) -> "Table":
+        """LEFT SEMI join operator (ᐅᐸ)"""
+        semi_left_rows = list()
+
+        where = list(where.items())
+
+        for row in self:
+            for row_2 in other.σ({(where[0][0]): [(where[0][1][0]).split('.')[1], row[1]]},null=True):
+                semi_left_rows.append(row)
+        
+        table_name = f"({self.name}ᐅᐸ{other.name})"
+
+        tbl = Table(
+            name=table_name,
+            columns=self.columns,
+            data=semi_left_rows
+        )
+        
+        return tbl
+
     #TODO: Implement RIGHT SEMI join operator `ᐳᐊ`
+    def ᐳᐊ(self, other:"Table", where:Dict[str,list]) -> "Table":
+        """RIGHT SEMI join operator (ᐳᐊ)"""
+        semi_right_rows = list()
+
+        where = list(where.items())
+
+        for row in self:
+            for row_2 in other.σ({(where[0][0]): [(where[0][1][0]).split('.')[1], row[1]]},null=True):
+                semi_right_rows.append(row_2)
+        
+        table_name = f"({self.name}ᐳᐊ{other.name})"
+
+        tbl = Table(
+            name=table_name,
+            columns=other.columns,
+            data=semi_right_rows
+        )
+        
+        return tbl
+
     #TODO: Implement LEFT ANTI join operator `ᐅ`
+    def ᐅ(self, other:"Table", where:Dict[str,list]) -> "Table":
+        """LEFT ANTI join operator (ᐅ)"""
+        left_anti_rows = list()
+
+        where = list(where.items())
+
+        for row in self:
+            for row_2 in other.σ({(where[0][0]): [(where[0][1][0]).split('.')[1], row[1]]},null=True):
+                if row_2[0] is None:
+                    left_anti_rows.append(row)
+
+        table_name = f"({self.name}ᐅ{other.name})"
+
+        tbl = Table(
+            name=table_name,
+            columns=self.columns,
+            data=left_anti_rows
+        )
+        
+        return tbl
+
     #TODO: Implement RIGHT ANTI join operator `◁`
+    def ᐊ(self, other:"Table", where:Dict[str,list]) -> "Table":
+        """LEFT ANTI join operator (◁)"""
+        anti_right_rows = list()
+
+        where = list(where.items())
+
+        for row in self:
+            for row_2 in other.σ({(where[0][0]): [(where[0][1][0]).split('.')[1], row[0]]},null=True):
+                if row_2[1] is None:
+                    anti_right_rows.append(row)
+
+        table_name = f"({self.name}ᐅ{other.name})"
+
+        tbl = Table(
+            name=table_name,
+            columns=other.columns,
+            data=anti_right_rows
+        )
+        
+        return tbl
+
+    #TODO: Implement LEFT join operator `⟕`
+    def ᗌᐊ(self, other:"Table", where:Dict[str,list]) -> "Table":
+        """LEFT join operator (⟕)"""
+        left_cols = dict()
+        left_cols.update({f"self.{k}":v for k, v in self.columns.items()})
+        left_cols.update({f"other.{k}":v for k, v in other.columns.items()})
+        left_rows = list()
+
+        where = list(where.items())
+
+        for row in self:
+            for row_2 in other.σ({(where[0][0]): [(where[0][1][0]).split('.')[1], row[1]]},null=True):
+                left_rows.append(row + row_2)
+
+        table_name = f"({self.name}⟕{other.name})"
+
+        tbl = Table(
+            name=table_name,
+            columns=left_cols,
+            data=left_rows
+        )
+        
+        return tbl
+
+    #TODO: Implement RIGHT join operator `ᐅᗏ`
+    def ᐅᗏ(self, other:"Table", where:Dict[str,list]) -> "Table":
+        """RIGHT join operator (ᐅᗏ)"""
+        right_cols = dict()
+        right_cols.update({f"self.{k}":v for k, v in self.columns.items()})
+        right_cols.update({f"other.{k}":v for k, v in other.columns.items()})
+        right_rows = list()
+
+        where = list(where.items())
+
+        for row in other:
+            for row_2 in self.σ({(where[0][0]): [(where[0][1][0]).split('.')[1], row[0]]},null=True):
+                right_rows.append(row_2 + row)
+
+        table_name = f"({self.name}ᐅᗏ{other.name})"
+
+        tbl = Table(
+            name=table_name,
+            columns=right_cols,
+            data=right_rows
+        )
+        
+        return tbl
+
 
 class Index():
     """Represents a table index"""
